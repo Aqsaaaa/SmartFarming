@@ -6,7 +6,7 @@ router = APIRouter()
 
 OPEN_METEO_BASE = "https://api.open-meteo.com/v1/forecast"
 
-@router.get("/", response_model=dict)
+@router.get("", response_model=dict)
 async def get_weather(
     lat: float = Query(..., description="Latitude in decimal degrees"),
     lon: float = Query(..., description="Longitude in decimal degrees"),

@@ -12,7 +12,7 @@ async def get_sop_list():
     return await list_sop_files()
 
 
-@router.get("/{filename}")
+@router.get("{filename}")
 async def get_sop_content(
     filename: str,
     model: Optional[str] = Query(None, description="Optional AI model to summarise the SOP (e.g., 'ollama' or 'claude')."),
@@ -45,13 +45,13 @@ async def get_sop_content(
         if model.lower() == "ollama":
             try:
                 from ..ollama_client import generate
-                ai_response = await generate(prompt)
+                ai_response = await generate(prompt) # type: ignore
             except Exception as exc:
                 raise HTTPException(status_code=500, detail=f"Ollama error: {exc}")
             return {"summary": ai_response}
         elif model.lower() == "claude":
             try:
-                from ..claude_client import call_claude
+                from ..claude_client import call_claude # type: ignore
                 ai_response = await call_claude(prompt)
             except Exception as exc:
                 raise HTTPException(status_code=500, detail=f"Claude error: {exc}")

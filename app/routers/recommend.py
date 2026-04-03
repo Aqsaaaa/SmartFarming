@@ -11,7 +11,7 @@ GPT_MODEL = "gpt-oss:120b-cloud"
 class RecommendResponse(BaseModel):
     recommendation: str
 
-@router.post("/", response_model=RecommendResponse)
+@router.post("", response_model=RecommendResponse)
 async def get_recommendation(
     prompt: str = Form(...),
     image: UploadFile = File(None),
@@ -34,7 +34,7 @@ async def get_recommendation(
         f"Context data (weather, sensor, recent):\n{context}\n\n"
         f"{image_desc}"
         f"User request: {prompt}\n"
-        "Provide a concise fertilizer recommendation (just the recommendation, no extra explanation)."
+        "jelaskan detail terkait gambar, data sensor yang anda dapat, dan juga cuaca saat ini, kemudian baca RAG SOP document nya, lalu berikan solusi rekomendasi anda. (jelaskan secara mendetail))."
     )
     answer = await ollama_generate(prompt=final_prompt, model=GPT_MODEL)
     return RecommendResponse(recommendation=answer.strip())

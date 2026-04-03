@@ -6,7 +6,7 @@ router = APIRouter()
 
 LLAVA_MODEL = "llava:13b"
 
-@router.post("/", response_model=dict)
+@router.post("", response_model=dict)
 async def analyze_image(image: UploadFile = File(...)):
     if not image.content_type.startswith("image/"): # type: ignore
         raise HTTPException(status_code=400, detail="File must be an image")

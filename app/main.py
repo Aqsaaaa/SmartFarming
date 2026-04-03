@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import weather, sensor, image, recommend, sop_dummy
 
-app = FastAPI(title="Smart Farming API", version="0.1.0")
+app = FastAPI(title="Smart Farming API", version="0.1.0", redirect_slashes=False)
 
 # Allow all origins for simplicity (can be restricted later)
 app.add_middleware(
