@@ -6,13 +6,13 @@ from ..utils.sop_reader import list_sop_files, read_sop
 router = APIRouter(tags=["SOP"])
 
 
-@router.get("/", response_model=List[str])
+@router.get("", response_model=List[str])
 async def get_sop_list():
     """Return a list of available SOP filenames stored in the dummy folder."""
     return await list_sop_files()
 
 
-@router.get("{filename}")
+@router.get("/{filename}")
 async def get_sop_content(
     filename: str,
     model: Optional[str] = Query(None, description="Optional AI model to summarise the SOP (e.g., 'ollama' or 'claude')."),
