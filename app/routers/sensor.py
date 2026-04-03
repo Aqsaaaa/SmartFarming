@@ -11,7 +11,7 @@ DUMMY_SENSOR_DATA = {
     "temperature": 18.7,    # Celsius
 }
 
-@router.get("/", response_model=dict)
+@router.get("", response_model=dict)
 async def get_sensor_data():
     # In a real implementation this would proxy to a sensor gateway.
     await rag_store.add("sensor", DUMMY_SENSOR_DATA)

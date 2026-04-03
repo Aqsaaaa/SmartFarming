@@ -20,7 +20,7 @@ async def get_recommendation(
     context = await rag_store.build_context(prompt)
     image_desc = ""
     if image is not None:
-        if not image.content_type.startswith("image/"):
+        if not image.content_type.startswith("image/"): # type: ignore
             raise HTTPException(status_code=400, detail="Uploaded file must be an image")
         raw_bytes = await image.read()
         image_desc = await ollama_generate(

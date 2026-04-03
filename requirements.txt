@@ -3,3 +3,8 @@ uvicorn[standard]
 httpx
 pydantic
 python-multipart
+pytest
+pytest-asyncio
+pytest-cov
+coverage
+PyMuPDF
