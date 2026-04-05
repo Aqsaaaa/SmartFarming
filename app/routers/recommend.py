@@ -25,7 +25,7 @@ async def get_recommendation(
         raw_bytes = await image.read()
         image_desc = await ollama_generate(
             prompt="Provide a concise description of the image for agronomic purposes.",
-            model="llava:13b",
+            model="qwen3.5:397b-cloud",
             images=[raw_bytes],
         )
         image_desc = f"Image description: {image_desc.strip()}\n"

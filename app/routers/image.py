@@ -4,7 +4,7 @@ from ..ollama_client import generate as ollama_generate
 
 router = APIRouter()
 
-LLAVA_MODEL = "llava:13b"
+LLAVA_MODEL = "qwen3.5:397b-cloud"
 
 @router.post("", response_model=dict)
 async def analyze_image(image: UploadFile = File(...)):
