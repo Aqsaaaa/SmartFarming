@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "Smart Farming API",
+    "description": "API for smart farming system with weather, sensor data, image analysis, and AI recommendations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Root Endpoint",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": ["{{base_url}}"],
+          "path": [""]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Weather Data",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/weather?lat=-6.2&lon=106.8",
+          "host": ["{{base_url}}"],
+          "path": ["weather"],
+          "query": [
+            {
+              "key": "lat",
+              "value": "-6.2"
+            },
+            {
+              "key": "lon",
+              "value": "106.8"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Sensor Data",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/sensor",
+          "host": ["{{base_url}}"],
+          "path": ["sensor"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Text Recommendation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "prompt",
+              "value": "What fertilizer should I use for rice plants?",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/recommend",
+          "host": ["{{base_url}}"],
+          "path": ["recommend"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Image Analysis",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "/path/to/plant-image.jpg"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/analyze-image",
+          "host": ["{{base_url}}"],
+          "path": ["analyze-image"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SOP Data",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/sop",
+          "host": ["{{base_url}}"],
+          "path": ["sop"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Pre-request script if needed"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Test script to validate responses",
+          "pm.test(\"Status code is 200\", function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "",
+          "pm.test(\"Response has valid JSON\", function () {",
+          "    pm.response.to.be.json;",
+          "});"
+        ]
+      }
+    }
+  ]
+}

@@ -27,13 +27,19 @@
         <pre id="sensor-output"></pre>
     </div>
 
+    <div class="section" id="image-analysis-section">
+        <h2>Image Analysis</h2>
+        <label for="image-analysis-input">Upload plant image:</label>
+        <input type="file" id="image-analysis-input" accept="image/*" />
+        <button onclick="analyzeImage()">Analyze Image</button>
+        <pre id="image-analysis-output"></pre>
+    </div>
+
     <div class="section" id="recommend-section">
-        <h2>Fertilizer Recommendation</h2>
+        <h2>Text Recommendation</h2>
         <label for="prompt">Prompt:</label>
         <textarea id="prompt" placeholder="What fertilizer should I apply today?"></textarea>
-        <label for="image">Optional field image:</label>
-        <input type="file" id="image" accept="image/*" />
-        <button onclick="getRecommendation()">Get Recommendation</button>
+        <button onclick="getTextRecommendation()">Get Recommendation</button>
         <pre id="recommend-output"></pre>
     </div>
 
@@ -51,14 +57,34 @@
             const data = await resp.json();
             document.getElementById('sensor-output').textContent = JSON.stringify(data, null, 2);
         }
-        async function getRecommendation() {
+        async function analyzeImage() {
+            const imageInput = document.getElementById('image-analysis-input');
+            if (!imageInput.files[0]) {
+                alert('Please select an image to analyze');
+                return;
+            }
+
+            const form = new FormData();
+            form.append('image', imageInput.files[0]);
+
+            const resp = await fetch(`${apiBase}/analyze-image`, {
+                method: 'POST',
+                body: form,
+            });
+            const data = await resp.json();
+            document.getElementById('image-analysis-output').textContent = data.description;
+        }
+
+        async function getTextRecommendation() {
             const prompt = document.getElementById('prompt').value;
-            const imageInput = document.getElementById('image');
+            if (!prompt.trim()) {
+                alert('Please enter a prompt');
+                return;
+            }
+
             const form = new FormData();
             form.append('prompt', prompt);
-            if (imageInput.files[0]) {
-                form.append('image', imageInput.files[0]);
-            }
+
             const resp = await fetch(`${apiBase}/recommend`, {
                 method: 'POST',
                 body: form,
