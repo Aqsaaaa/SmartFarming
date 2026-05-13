@@ -1,12 +1,14 @@
 import json
 import asyncio
 import time
+import traceback
 from collections import deque
 from typing import Deque, Dict, List, Optional
 
 # --- IMPORT CHROMA DB UNTUK VECTOR STORE ---
 import chromadb
 from chromadb.utils import embedding_functions
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # ==========================================
 # 1. RAG STORE (In-Memory untuk Data Sensor)
@@ -56,8 +58,10 @@ class RetrievedDoc:
 
 class VectorDBStore:
     def __init__(self):
-        # PersistentClient menyimpan database dalam folder lokal secara otomatis
-        self.client = chromadb.PersistentClient(path="./chroma_data")
+        import os
+        _db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chroma_data")
+        os.makedirs(_db_path, exist_ok=True)
+        self.client = chromadb.PersistentClient(path=_db_path)
         
         # Menggunakan model embedding default (all-MiniLM-L6-v2) yang cepat dan ringan
         self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
@@ -67,34 +71,51 @@ class VectorDBStore:
             embedding_function=self.embedding_fn # type: ignore
         )
 
-    def _chunk_text(self, text: str, chunk_size: int = 150, overlap: int = 30) -> List[str]:
-        """Memecah teks panjang menjadi paragraf pendek agar hasil pencarian RAG akurat."""
-        words = text.split()
-        chunks = []
-        for i in range(0, len(words), chunk_size - overlap):
-            chunk = " ".join(words[i:i + chunk_size])
-            chunks.append(chunk)
+    def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=overlap,
+            separators=["\n\n", "\n", ".", " ", ""]
+        )
+        chunks = text_splitter.split_text(text)
+
+        print("=" * 60)
+        print(f"[CHUNKER] Total teks: {len(text)} karakter")
+        print(f"[CHUNKER] chunk_size={chunk_size}, overlap={overlap}")
+        print(f"[CHUNKER] Menghasilkan {len(chunks)} chunk:")
+        print("-" * 60)
+        for i, chunk in enumerate(chunks):
+            print(f"  Chunk #{i}: {len(chunk)} karakter")
+            print(f"    Preview: {chunk[:120]}...")
+            if i > 0:
+                prev_end = chunks[i - 1][-overlap:] if len(chunks[i - 1]) > overlap else chunks[i - 1]
+                print(f"    Overlap with prev: {prev_end[:80]}...")
+            print()
+        print("=" * 60)
+
         return chunks
 
     async def upsert_document(self, doc_id: str, text: str, metadata: Optional[dict] = None):
-        """Fungsi ini digunakan di Endpoint SOP Anda untuk menyimpan teks ke Vector DB."""
         chunks = self._chunk_text(text)
         if not chunks:
             return
 
-        # Hapus dokumen lama jika ada (agar saat file di-update, tidak duplikat)
         await self.delete_document(doc_id)
 
         ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
         metadatas = [metadata or {"source": doc_id} for _ in chunks]
 
-        # Jalankan di background thread agar tidak memblokir FastAPI
-        await asyncio.to_thread(
-            self.collection.add,
-            documents=chunks,
-            metadatas=metadatas, # type: ignore
-            ids=ids
-        )
+        try:
+            await asyncio.to_thread(
+                self.collection.add,
+                documents=chunks,
+                metadatas=metadatas, # pyright: ignore[reportArgumentType]
+                ids=ids
+            )
+        except Exception as e:
+            print(f"[RAG ERROR] Gagal menyimpan ke ChromaDB: {e}")
+            traceback.print_exc()
+            raise
 
     async def delete_document(self, doc_id: str):
         """Menghapus dokumen dari Vector DB berdasarkan source / nama file."""
@@ -113,14 +134,29 @@ class VectorDBStore:
             query_texts=[query],
             n_results=top_k
         )
-        
+
         docs = []
         # Parsing hasil dari ChromaDB ke format RetrievedDoc
         if results and results.get('documents') and results['documents'][0]: # type: ignore
             for text_chunk, meta in zip(results['documents'][0], results['metadatas'][0]): # type: ignore
                 docs.append(RetrievedDoc(text=text_chunk, metadata=meta)) # type: ignore
-                
+
         return docs
+
+    async def get_stats(self) -> dict:
+        """Return statistics about the vector database."""
+        try:
+            count = await asyncio.to_thread(self.collection.count)
+            return {
+                "document_count": count,
+                "collection_name": self.collection.name,
+                "status": "active" if count > 0 else "empty"
+            }
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status": "error"
+            }
 
 # ==========================================
 # 3. INSTANCE GLOBAL

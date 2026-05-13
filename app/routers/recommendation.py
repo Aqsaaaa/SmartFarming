@@ -9,7 +9,7 @@ router = APIRouter()
 
 # Anda dapat mengubah string model ini sesuai dengan model terbaru yang aktif di server Anda 
 # (misal: "llama3-70b-instruct", "mixtral:8x7b", dll)
-GPT_MODEL = "gpt-oss:120b-cloud"
+GPT_MODEL = "qwen3.5:397b-cloud"
 
 class RecommendResponse(BaseModel):
     recommendation: str

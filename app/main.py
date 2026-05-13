@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import image_analysis, weather, sensor, recommendation, sop_dummy
+from .routers import image_analysis, weather, sensor, recommendation, sop_upload
 
 app = FastAPI(title="Smart Farming API", version="0.1.0", redirect_slashes=False)
 
@@ -20,7 +20,7 @@ app.include_router(weather.router, prefix="/weather", tags=["weather"])
 app.include_router(sensor.router, prefix="/sensor", tags=["sensor"])
 app.include_router(image_analysis.router, prefix="/analyze-image", tags=["image analysis"])
 app.include_router(recommendation.router, prefix="/recommend", tags=["text recommendation"])
-app.include_router(sop_dummy.router, prefix="/sop", tags=["sop"])
+app.include_router(sop_upload.router, prefix="/sop", tags=["sop_upload"])
 
 # Root endpoint
 @app.get("/")
