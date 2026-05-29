@@ -7,7 +7,7 @@ from ..rag import vector_db
 
 router = APIRouter(tags=["sop_upload"])
 
-EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "http://localhost:3000")
+EXPRESS_API_URL = os.getenv("EXPRESS_API_URL", "https://70sj7zdm-3000.asse.devtunnels.ms")
 
 ALLOWED_EXTENSIONS = {".txt", ".pdf"}
 
