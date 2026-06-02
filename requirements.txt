@@ -3,8 +3,11 @@ uvicorn[standard]
 httpx
 pydantic
 python-multipart
+python-dotenv
+PyMuPDF
+langchain-text-splitters
+chromadb
 pytest
 pytest-asyncio
 pytest-cov
 coverage
-PyMuPDF
