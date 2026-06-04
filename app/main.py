@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from .routers import image_analysis, weather, sensor, recommendation, sop_upload
+from .routers import image_analysis, recommendation, sop_upload
 from .worker import start_background_worker, stop_background_worker
 
 
@@ -33,8 +33,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(weather.router, prefix="/weather", tags=["weather"])
-app.include_router(sensor.router, prefix="/sensor", tags=["sensor"])
 app.include_router(image_analysis.router, prefix="/analyze-image", tags=["image analysis"])
 app.include_router(recommendation.router, prefix="/recommend", tags=["text recommendation"])
 app.include_router(sop_upload.router, prefix="/api/sop", tags=["sop_upload"])

@@ -42,7 +42,9 @@ class LaravelClient:
 
         Returns ``(file_content_bytes, response_json)``.
         """
-        async with httpx.AsyncClient(headers=self._headers(), timeout=30.0) as client:
+        async with httpx.AsyncClient(
+            headers=self._headers(), timeout=30.0, follow_redirects=True
+        ) as client:
             meta_resp = await client.get(
                 f"{self.base_url}/api/rag/documents/{doc_id}/download"
             )
