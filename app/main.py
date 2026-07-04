@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from .routers import image_analysis, recommendation, sop_upload
+from .routers import classify_disease, recommendation
 from .worker import start_background_worker, stop_background_worker
 
 
@@ -33,9 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(image_analysis.router, prefix="/analyze-image", tags=["image analysis"])
+app.include_router(classify_disease.router, prefix="/classify-disease", tags=["disease classification"])
 app.include_router(recommendation.router, prefix="/recommend", tags=["text recommendation"])
-app.include_router(sop_upload.router, prefix="/api/sop", tags=["sop_upload"])
 
 
 @app.get("/")

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, Form
 from pydantic import BaseModel
 
@@ -7,7 +9,8 @@ from ..rag import rag_store, vector_db
 
 router = APIRouter()
 
-GPT_MODEL = "gpt-oss:120b-cloud"
+GPT_MODEL = os.getenv("TEXT_MODEL", "gpt-oss:120b-cloud")
+TEMPERATURE = float(os.getenv("TEMPERATURE", "0.2"))
 
 
 class RecommendResponse(BaseModel):
@@ -63,7 +66,7 @@ async def get_text_recommendation(
 """
 
     try:
-        answer = await ollama_generate(prompt=final_prompt, model=GPT_MODEL)
+        answer = await ollama_generate(prompt=final_prompt, model=GPT_MODEL, temperature=TEMPERATURE)
         final_answer = answer.strip()
 
         if "saya hanya di design untuk menjawab pertanyaan seputar Smart Farming" in final_answer.lower() and len(final_answer) < 100:

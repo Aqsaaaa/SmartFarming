@@ -16,11 +16,13 @@ async def _post(endpoint: str, payload: dict) -> dict:
         response.raise_for_status()
         return response.json()
 
-async def generate(prompt: str, model: str, images: Optional[List[bytes]] = None) -> str:
+async def generate(prompt: str, model: str, images: Optional[List[bytes]] = None, temperature: Optional[float] = None) -> str:
     """Generate a response from an Ollama model.
     If ``images`` is provided, they are base64‑encoded and sent as ``image`` fields.
     """
     payload = {"model": model, "prompt": prompt, "stream": False}
+    if temperature is not None:
+        payload["temperature"] = temperature
     if images:
         # Ollama expects base64 strings
         payload["images"] = [base64.b64encode(img).decode("utf-8") for img in images]
