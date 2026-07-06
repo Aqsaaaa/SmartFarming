@@ -13,7 +13,8 @@ A minimal FastAPI service that:
 3. Pull the required Ollama models:
    ```bash
    ollama pull gpt-oss:120b-cloud
-   ollama pull llava
+   ollama pull minimax-m3:cloud
+   ollama pull nomic-embed-text
    ```
 4. Git (optional, for cloning the repo).
 

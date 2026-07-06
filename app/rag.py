@@ -6,8 +6,9 @@ from collections import deque
 from typing import Deque, Dict, List, Optional
 
 # --- IMPORT CHROMA DB UNTUK VECTOR STORE ---
+import httpx
 import chromadb
-from chromadb.utils import embedding_functions
+from chromadb import EmbeddingFunction
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # ==========================================
@@ -56,6 +57,26 @@ class RetrievedDoc:
         self.text = text
         self.metadata = metadata
 
+# ==========================================
+# 2b. OLLAMA EMBEDDING FUNCTION (via /api/embed)
+# ==========================================
+class OllamaEmbeddingFunction(EmbeddingFunction):
+    def __init__(self):
+        import os
+        self.model_name = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+        self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        timeout = httpx.Timeout(120.0, read=120.0)
+        response = httpx.post(
+            f"{self.ollama_url}/api/embed",
+            json={"model": self.model_name, "input": input},
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        return response.json()["embeddings"]
+
+
 class VectorDBStore:
     def __init__(self):
         import os
@@ -63,8 +84,8 @@ class VectorDBStore:
         os.makedirs(_db_path, exist_ok=True)
         self.client = chromadb.PersistentClient(path=_db_path)
         
-        # Menggunakan model embedding default (all-MiniLM-L6-v2) yang cepat dan ringan
-        self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+        # Menggunakan nomic-embed-text via Ollama (batas konteks 8192 token, aman untuk chunk 1000 karakter)
+        self.embedding_fn = OllamaEmbeddingFunction()
         
         self.collection = self.client.get_or_create_collection(
             name="smart_farming_sops",

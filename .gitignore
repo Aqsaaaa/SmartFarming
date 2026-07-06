@@ -1,10 +1,13 @@
 # Ignore Python virtual environment directories
 venv/
+.env
 .env/
-.env*/
+chroma_data/
 *.egg-info/
 __pycache__/
 *.pyc
+
+chroma_data/
 
 # If you use a different name for the virtual environment, add it here
 # .venv/
