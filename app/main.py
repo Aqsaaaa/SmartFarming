@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv()
+load_dotenv(override=True)
 
 from .routers import classify_disease, recommendation
 from .worker import start_background_worker, stop_background_worker
@@ -13,8 +13,10 @@ from .worker import start_background_worker, stop_background_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("=== LIFESPAN START ===")
     await start_background_worker()
     yield
+    print("=== LIFESPAN STOP ===")
     await stop_background_worker()
 
 

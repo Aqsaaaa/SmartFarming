@@ -7,6 +7,17 @@ from typing import Any, Optional
 from .laravel_client import LaravelClient
 from .rag import vector_db
 
+async def start_background_worker() -> None:
+    print(">>> start_background_worker CALLED <<<")
+
+    global _worker_task
+
+    print("WORKER_ENABLED =", os.getenv("WORKER_ENABLED"))
+
+    if os.getenv("WORKER_ENABLED", "true").lower() not in ("true", "1"):
+        print("Worker disabled")
+        return
+
 POLL_INTERVAL: int = int(os.getenv("WORKER_POLL_INTERVAL", "15"))
 
 
@@ -19,6 +30,7 @@ class RagWorker:
 
     def __init__(self) -> None:
         self.client: LaravelClient = LaravelClient()
+        print("CLIENT URL =", self.client.base_url)
 
     async def _extract_text(self, content: bytes, filename: str) -> str:
         ext = os.path.splitext(filename)[1].lower()

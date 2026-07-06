@@ -3,10 +3,6 @@ from typing import Any, Optional
 
 import httpx
 
-LARAVEL_API_URL: str = os.getenv("LARAVEL_API_URL", "http://localhost:8001")
-RAG_SERVICE_TOKEN: str = os.getenv("RAG_SERVICE_TOKEN", "")
-
-
 class LaravelClient:
     """HTTP client for service-to-service communication with Laravel.
 
@@ -15,8 +11,15 @@ class LaravelClient:
     """
 
     def __init__(self, base_url: Optional[str] = None, token: Optional[str] = None) -> None:
-        self.base_url = (base_url or LARAVEL_API_URL).rstrip("/")
-        self.token = token or RAG_SERVICE_TOKEN
+        self.base_url = (
+            base_url
+            or os.getenv("LARAVEL_API_URL", "http://localhost:8001")
+        ).rstrip("/")
+
+        self.token = (
+            token
+            or os.getenv("RAG_SERVICE_TOKEN", "")
+        )
 
         if not self.token:
             raise RuntimeError(
