@@ -1,0 +1,27 @@
+name: Deploy Python API
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST_PYTHON }}
+          username: ${{ secrets.SSH_USER_PYTHON }}
+          key: ${{ secrets.SSH_KEY_PYTHON }}
+          script: |
+            cd /opt/app
+
+            git pull origin main
+
+            source venv/bin/activate
+            pip install -r requirements.txt
+
+            sudo systemctl restart smartfarming-api
