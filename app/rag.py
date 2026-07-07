@@ -1,3 +1,5 @@
+import os
+
 import json
 import asyncio
 import time
@@ -62,138 +64,256 @@ class RetrievedDoc:
 # ==========================================
 class OllamaEmbeddingFunction(EmbeddingFunction):
     def __init__(self):
-        import os
-        self.model_name = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
-        self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+        self.model_name = os.getenv(
+            "EMBEDDING_MODEL",
+            "nomic-embed-text"
+        )
+
+        self.ollama_url = os.getenv(
+            "OLLAMA_URL",
+            "http://127.0.0.1:11434"
+        )
+
+        self.client = httpx.Client(
+            timeout=httpx.Timeout(
+                connect=30,
+                read=300,
+                write=300,
+                pool=300,
+            )
+        )
 
     def __call__(self, input: list[str]) -> list[list[float]]:
-        timeout = httpx.Timeout(120.0, read=120.0)
-        response = httpx.post(
-            f"{self.ollama_url}/api/embed",
-            json={"model": self.model_name, "input": input},
-            timeout=timeout,
-        )
-        response.raise_for_status()
-        return response.json()["embeddings"]
+        embeddings = []
+
+        total = len(input)
+
+        for i, text in enumerate(input):
+
+            for retry in range(3):
+                try:
+                    print(f"[Embedding] {i+1}/{total}")
+
+                    response = self.client.post(
+                        f"{self.ollama_url}/api/embed",
+                        json={
+                            "model": self.model_name,
+                            "input": text
+                        }
+                    )
+
+                    response.raise_for_status()
+
+                    embeddings.append(
+                        response.json()["embeddings"][0]
+                    )
+
+                    break
+
+                except Exception as e:
+
+                    print(
+                        f"[Embedding Retry {retry+1}] {e}"
+                    )
+
+                    if retry == 2:
+                        raise
+
+                    time.sleep(5)
+
+        return embeddings
 
 
 class VectorDBStore:
+
     def __init__(self):
-        import os
-        _db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chroma_data")
-        os.makedirs(_db_path, exist_ok=True)
-        self.client = chromadb.PersistentClient(path=_db_path)
-        
-        # Menggunakan nomic-embed-text via Ollama (batas konteks 8192 token, aman untuk chunk 1000 karakter)
+
+        db_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "chroma_data"
+        )
+
+        os.makedirs(db_path, exist_ok=True)
+
+        self.client = chromadb.PersistentClient(
+            path=db_path
+        )
+
         self.embedding_fn = OllamaEmbeddingFunction()
-        
+
         collection_name = "smart_farming_sops"
+
         try:
-            self.collection = self.client.get_or_create_collection(
+
+            self.collection = self.client.get_collection(
                 name=collection_name,
-                embedding_function=self.embedding_fn # type: ignore
+                embedding_function=self.embedding_fn
             )
-        except ValueError:
-            self.client.delete_collection(name=collection_name)
+
+        except Exception:
+
             self.collection = self.client.create_collection(
                 name=collection_name,
-                embedding_function=self.embedding_fn # type: ignore
+                embedding_function=self.embedding_fn
             )
 
-    def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
-        text_splitter = RecursiveCharacterTextSplitter(
+
+    def _chunk_text(
+        self,
+        text: str,
+        chunk_size: int = 1000,
+        overlap: int = 200
+    ):
+
+        splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=overlap,
-            separators=["\n\n", "\n", ".", " ", ""]
+            separators=[
+                "\n\n",
+                "\n",
+                ".",
+                " ",
+                ""
+            ]
         )
-        chunks = text_splitter.split_text(text)
+
+        chunks = splitter.split_text(text)
 
         print("=" * 60)
-        print(f"[CHUNKER] Total teks: {len(text)} karakter")
-        print(f"[CHUNKER] chunk_size={chunk_size}, overlap={overlap}")
-        print(f"[CHUNKER] Menghasilkan {len(chunks)} chunk:")
-        print("-" * 60)
-        for i, chunk in enumerate(chunks):
-            print(f"  Chunk #{i}: {len(chunk)} karakter")
-            print(f"    Preview: {chunk[:120]}...")
-            if i > 0:
-                prev_end = chunks[i - 1][-overlap:] if len(chunks[i - 1]) > overlap else chunks[i - 1]
-                print(f"    Overlap with prev: {prev_end[:80]}...")
-            print()
+        print(f"Total Chunk : {len(chunks)}")
         print("=" * 60)
 
         return chunks
 
-    async def upsert_document(self, doc_id: str, text: str, metadata: Optional[dict] = None, batch_size: int = 10):
+
+    async def upsert_document(
+        self,
+        doc_id: str,
+        text: str,
+        metadata: dict | None = None,
+        batch_size: int = 5,
+    ):
+
         chunks = self._chunk_text(text)
+
         if not chunks:
             return
 
         await self.delete_document(doc_id)
 
-        ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
-        metadatas = [metadata or {"source": doc_id} for _ in chunks]
+        ids = [
+            f"{doc_id}_{i}"
+            for i in range(len(chunks))
+        ]
 
-        total = len(chunks)
-        for start in range(0, total, batch_size):
-            end = min(start + batch_size, total)
-            batch_chunks = chunks[start:end]
-            batch_ids = ids[start:end]
-            batch_metadatas = metadatas[start:end]
+        metadatas = [
+            metadata or {"source": doc_id}
+            for _ in chunks
+        ]
 
-            try:
-                await asyncio.to_thread(
-                    self.collection.add,
-                    documents=batch_chunks,
-                    metadatas=batch_metadatas, # pyright: ignore[reportArgumentType]
-                    ids=batch_ids
-                )
-                print(f"[RAG] Batch {start//batch_size + 1}/{(total + batch_size - 1)//batch_size} tersimpan ({len(batch_chunks)} chunk)")
-            except Exception as e:
-                print(f"[RAG ERROR] Gagal menyimpan batch ke {end}: {e}")
-                traceback.print_exc()
-                raise
+        total_batch = (
+            len(chunks) + batch_size - 1
+        ) // batch_size
 
-    async def delete_document(self, doc_id: str):
-        """Menghapus dokumen dari Vector DB berdasarkan source / nama file."""
-        try:
-            await asyncio.to_thread(
-                self.collection.delete,
-                where={"source": doc_id}
+        for batch in range(total_batch):
+
+            start = batch * batch_size
+            end = min(
+                start + batch_size,
+                len(chunks)
             )
+
+            print(
+                f"\n========== Batch {batch+1}/{total_batch} =========="
+            )
+
+            await asyncio.to_thread(
+
+                self.collection.add,
+
+                documents=chunks[start:end],
+
+                ids=ids[start:end],
+
+                metadatas=metadatas[start:end],
+
+            )
+
+            print(
+                f"Chunk {start+1}-{end} selesai"
+            )
+
+
+    async def delete_document(
+        self,
+        doc_id: str
+    ):
+
+        try:
+
+            await asyncio.to_thread(
+
+                self.collection.delete,
+
+                where={
+                    "source": doc_id
+                }
+
+            )
+
         except Exception:
+
             pass
 
-    async def search_similar(self, query: str, top_k: int = 3) -> List[RetrievedDoc]:
-        """Mencari potongan SOP yang paling relevan dengan pertanyaan user."""
-        results = await asyncio.to_thread(
+
+    async def search_similar(
+        self,
+        query: str,
+        top_k: int = 3
+    ):
+
+        result = await asyncio.to_thread(
+
             self.collection.query,
+
             query_texts=[query],
-            n_results=top_k
+
+            n_results=top_k,
+
         )
 
         docs = []
-        # Parsing hasil dari ChromaDB ke format RetrievedDoc
-        if results and results.get('documents') and results['documents'][0]: # type: ignore
-            for text_chunk, meta in zip(results['documents'][0], results['metadatas'][0]): # type: ignore
-                docs.append(RetrievedDoc(text=text_chunk, metadata=meta)) # type: ignore
+
+        if result["documents"]:
+
+            for text, meta in zip(
+
+                result["documents"][0],
+
+                result["metadatas"][0],
+
+            ):
+
+                docs.append(
+                    RetrievedDoc(
+                        text=text,
+                        metadata=meta
+                    )
+                )
 
         return docs
 
-    async def get_stats(self) -> dict:
-        """Return statistics about the vector database."""
-        try:
-            count = await asyncio.to_thread(self.collection.count)
-            return {
-                "document_count": count,
-                "collection_name": self.collection.name,
-                "status": "active" if count > 0 else "empty"
-            }
-        except Exception as e:
-            return {
-                "error": str(e),
-                "status": "error"
-            }
+    async def get_stats(self):
+
+        count = await asyncio.to_thread(
+            self.collection.count
+        )
+
+        return {
+            "document_count": count,
+            "collection": self.collection.name,
+        }
 
 # ==========================================
 # 3. INSTANCE GLOBAL
