@@ -4,7 +4,7 @@
 A minimal FastAPI service that:
 - Retrieves open‑source weather data (Open‑Meteo)
 - Serves dummy sensor readings
-- Accepts an optional field image and generates a description using Ollama **llava**
+- Accepts an optional field image and generates a description using Ollama **minimax-m3:cloud**
 - Provides fertilizer recommendations via Ollama **gpt‑oss:120b-cloud** using a simple in‑memory RAG store.
 
 ## Prerequisites

@@ -87,10 +87,18 @@ class VectorDBStore:
         # Menggunakan nomic-embed-text via Ollama (batas konteks 8192 token, aman untuk chunk 1000 karakter)
         self.embedding_fn = OllamaEmbeddingFunction()
         
-        self.collection = self.client.get_or_create_collection(
-            name="smart_farming_sops",
-            embedding_function=self.embedding_fn # type: ignore
-        )
+        collection_name = "smart_farming_sops"
+        try:
+            self.collection = self.client.get_or_create_collection(
+                name=collection_name,
+                embedding_function=self.embedding_fn # type: ignore
+            )
+        except ValueError:
+            self.client.delete_collection(name=collection_name)
+            self.collection = self.client.create_collection(
+                name=collection_name,
+                embedding_function=self.embedding_fn # type: ignore
+            )
 
     def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         text_splitter = RecursiveCharacterTextSplitter(
@@ -116,7 +124,7 @@ class VectorDBStore:
 
         return chunks
 
-    async def upsert_document(self, doc_id: str, text: str, metadata: Optional[dict] = None):
+    async def upsert_document(self, doc_id: str, text: str, metadata: Optional[dict] = None, batch_size: int = 10):
         chunks = self._chunk_text(text)
         if not chunks:
             return
@@ -126,17 +134,25 @@ class VectorDBStore:
         ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
         metadatas = [metadata or {"source": doc_id} for _ in chunks]
 
-        try:
-            await asyncio.to_thread(
-                self.collection.add,
-                documents=chunks,
-                metadatas=metadatas, # pyright: ignore[reportArgumentType]
-                ids=ids
-            )
-        except Exception as e:
-            print(f"[RAG ERROR] Gagal menyimpan ke ChromaDB: {e}")
-            traceback.print_exc()
-            raise
+        total = len(chunks)
+        for start in range(0, total, batch_size):
+            end = min(start + batch_size, total)
+            batch_chunks = chunks[start:end]
+            batch_ids = ids[start:end]
+            batch_metadatas = metadatas[start:end]
+
+            try:
+                await asyncio.to_thread(
+                    self.collection.add,
+                    documents=batch_chunks,
+                    metadatas=batch_metadatas, # pyright: ignore[reportArgumentType]
+                    ids=batch_ids
+                )
+                print(f"[RAG] Batch {start//batch_size + 1}/{(total + batch_size - 1)//batch_size} tersimpan ({len(batch_chunks)} chunk)")
+            except Exception as e:
+                print(f"[RAG ERROR] Gagal menyimpan batch ke {end}: {e}")
+                traceback.print_exc()
+                raise
 
     async def delete_document(self, doc_id: str):
         """Menghapus dokumen dari Vector DB berdasarkan source / nama file."""
