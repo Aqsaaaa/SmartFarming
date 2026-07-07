@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv(override=True)
 
-from .routers import classify_disease, recommendation
+from .routers import classify_disease, rag, recommendation
 from .worker import start_background_worker, stop_background_worker
 
 
@@ -37,6 +37,7 @@ app.add_middleware(
 
 app.include_router(classify_disease.router, prefix="/classify-disease", tags=["disease classification"])
 app.include_router(recommendation.router, prefix="/recommend", tags=["text recommendation"])
+app.include_router(rag.router, prefix="/rag", tags=["rag"])
 
 
 @app.get("/")
